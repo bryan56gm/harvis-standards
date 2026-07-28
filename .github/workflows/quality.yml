@@ -1,0 +1,25 @@
+# Workflow reutilizable: en cada repo, .github/workflows/ci.yml hace
+#   jobs:
+#     quality:
+#       uses: bryan56gm/harvis-standards/.github/workflows/quality.yml@main
+name: quality
+on:
+  workflow_call:
+    inputs:
+      run-tests:
+        type: boolean
+        default: true
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec eslint . --max-warnings 50
+      - run: pnpm exec tsc --noEmit
+      - if: ${{ inputs.run-tests }}
+        run: pnpm test --if-present
+      - run: pnpm build --if-present

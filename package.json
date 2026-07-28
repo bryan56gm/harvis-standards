@@ -1,0 +1,22 @@
+{
+  "name": "@bryan56gm/harvis-standards",
+  "version": "1.0.0",
+  "description": "Estandares de codigo compartidos: ESLint flat config, Prettier, plantillas lefthook/commitlint/CI",
+  "type": "module",
+  "exports": {
+    ".": "./eslint.config.js",
+    "./prettier": "./prettier.config.js"
+  },
+  "files": ["eslint.config.js", "prettier.config.js", "templates"],
+  "peerDependencies": {
+    "eslint": ">=9"
+  },
+  "dependencies": {
+    "@eslint/js": "^9.0.0",
+    "typescript-eslint": "^8.0.0",
+    "eslint-plugin-boundaries": "^5.0.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.0"
+  },
+  "publishConfig": { "registry": "https://npm.pkg.github.com" }
+}
