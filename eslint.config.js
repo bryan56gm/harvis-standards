@@ -97,4 +97,26 @@ export const boundaries = [
   },
 ];
 
+// Para repos cuyo framework ya registra los plugins TS/react (p.ej.
+// eslint-config-next): solo severidades de reglas core + @typescript-eslint,
+// sin registrar ningun plugin (evita "Cannot redefine plugin").
+export const rulesOnly = [
+  {
+    rules: {
+      'max-lines': ['warn', { max: 300, skipBlankLines: true, skipComments: true }],
+      '@typescript-eslint/no-explicit-any': 'error',
+      'no-console': ['error', { allow: ['warn', 'error'] }],
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ group: ['../../../*'], message: 'Usa alias @/ en vez de rutas relativas profundas' }] },
+      ],
+    },
+  },
+  {
+    files: ['**/*.{ts,tsx}'],
+    ignores: ['**/*.test.*', '**/*.spec.*', '**/database.types.ts', '**/locales/**', '**/i18n/**'],
+    rules: { 'max-lines': ['error', { max: 500, skipBlankLines: true, skipComments: true }] },
+  },
+];
+
 export default [...base, ...react, ...boundaries];
