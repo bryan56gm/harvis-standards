@@ -1,0 +1,9 @@
+# Copiar a la raiz del repo. pnpm add -D lefthook lint-staged && pnpm lefthook install
+pre-commit:
+  commands:
+    lint-staged:
+      run: pnpm exec lint-staged
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit {1}
