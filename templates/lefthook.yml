@@ -1,8 +1,15 @@
-# Copiar a la raiz del repo. pnpm add -D lefthook lint-staged && pnpm lefthook install
+# harvis-standards v2 · copiar a la raíz del repo.
+#   pnpm add -D lefthook lint-staged @commitlint/cli @commitlint/config-conventional
+#   pnpm exec lefthook install
+# lint-staged se configura en package.json (ver templates/lint-staged.json).
 pre-commit:
+  parallel: false
   commands:
     lint-staged:
       run: pnpm exec lint-staged
+    typecheck:
+      glob: "*.{ts,tsx}"
+      run: pnpm typecheck
 commit-msg:
   commands:
     commitlint:

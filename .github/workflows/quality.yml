@@ -1,7 +1,8 @@
-# Workflow reutilizable: en cada repo, .github/workflows/ci.yml hace
+# Workflow reutilizable (harvis-standards v2). En cada repo, .github/workflows/ci.yml:
 #   jobs:
 #     quality:
-#       uses: bryan56gm/harvis-standards/.github/workflows/quality.yml@main
+#       uses: bryan56gm/harvis-standards/.github/workflows/quality.yml@v2
+#       with: { run-tests: true, max-warnings: 0, knip: false }
 name: quality
 on:
   workflow_call:
@@ -9,6 +10,17 @@ on:
       run-tests:
         type: boolean
         default: true
+      max-warnings:
+        description: Trinquete de warnings. 0 cuando el repo sale de `legacy`.
+        type: number
+        default: 50
+      knip:
+        description: Código muerto (pnpm knip). Opt-in.
+        type: boolean
+        default: false
+      node-version:
+        type: string
+        default: "22"
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -16,10 +28,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
+        with: { node-version: "${{ inputs.node-version }}", cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec eslint . --max-warnings 50
+      - run: pnpm exec eslint . --max-warnings ${{ inputs.max-warnings }}
       - run: pnpm exec tsc --noEmit
       - if: ${{ inputs.run-tests }}
         run: pnpm test --if-present
+      - if: ${{ inputs.knip }}
+        run: pnpm exec knip
       - run: pnpm build --if-present

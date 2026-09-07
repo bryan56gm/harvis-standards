@@ -1,28 +1,50 @@
 {
   "name": "@bryan56gm/harvis-standards",
-  "version": "1.0.0",
-  "description": "Estandares de codigo compartidos: ESLint flat config, Prettier, plantillas lefthook/commitlint/CI",
+  "version": "2.0.0",
+  "description": "Estándar de ingeniería de Bryan, carril máquina: ESLint flat config por framework, regla custom de Tailwind, Prettier, tsconfig base, plantillas (lefthook, commitlint, knip, renovate, CI) y workflow reutilizable. README generado desde la configuración.",
   "type": "module",
   "exports": {
     ".": "./eslint.config.js",
-    "./prettier": "./prettier.config.js"
+    "./prettier": "./prettier.config.js",
+    "./prettier-tailwind": "./prettier.tailwind.config.js",
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./rules/no-arbitrary-tailwind": "./rules/no-arbitrary-tailwind.js",
+    "./templates/*": "./templates/*"
   },
   "files": [
     "eslint.config.js",
     "prettier.config.js",
-    "templates"
+    "prettier.tailwind.config.js",
+    "tsconfig.base.json",
+    "rules",
+    "templates",
+    "README.md",
+    "CHANGELOG.md"
   ],
   "peerDependencies": {
-    "eslint": ">=9"
+    "eslint": ">=9",
+    "typescript-eslint": ">=8"
   },
   "dependencies": {
     "@eslint/js": "^9.0.0",
-    "typescript-eslint": "^8.0.0",
     "eslint-plugin-boundaries": "^5.0.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.0.0",
-    "globals": "^15.0.0"
+    "globals": "^15.0.0",
+    "typescript-eslint": "^8.0.0"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "test": "node scripts/test.mjs",
+    "readme": "node scripts/render-readme.mjs",
+    "readme:check": "node scripts/render-readme.mjs --check"
+  },
+  "peerDependenciesMeta": {
+    "typescript-eslint": {
+      "optional": false
+    }
   }
 }
