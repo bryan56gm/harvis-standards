@@ -2,6 +2,13 @@
 
 Semver. Los repos fijan `github:bryan56gm/harvis-standards#vX.Y.Z`.
 
+## 2.1.0 — 2026-09-07
+
+### Added
+
+- `quality.yml`: input `build` (default `true`). Un workflow reutilizable no recibe `env` del repo que lo llama; los repos cuyo build exige variables (personal-os: Supabase, Sentry) lo apagan y mantienen su job de build con secretos. La primera adopción real (personal-os) lo dejó a la vista.
+- Etiqueta flotante `v2`: sigue al último 2.x. Los repos referencian `quality.yml@v2` y fijan el paquete a `#vX.Y.Z`.
+
 ## 2.0.0 — 2026-09-07
 
 Fase F5 del estándar de ingeniería v2 (harvis-system#226, HAR-0022/0024).

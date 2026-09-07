@@ -2,7 +2,8 @@
 #   jobs:
 #     quality:
 #       uses: bryan56gm/harvis-standards/.github/workflows/quality.yml@v2
-#       with: { run-tests: true, max-warnings: 0, knip: false }
+#       with: { run-tests: true, max-warnings: 0, knip: false, build: true }
+# `v2` es una etiqueta flotante que sigue al último 2.x; `vX.Y.Z` fija una versión.
 name: quality
 on:
   workflow_call:
@@ -18,6 +19,13 @@ on:
         description: Código muerto (pnpm knip). Opt-in.
         type: boolean
         default: false
+      build:
+        description: >-
+          pnpm build. Apágalo si el build necesita variables de entorno (Next con
+          Supabase/Sentry): un workflow reutilizable no recibe env del repo, así que
+          ese build vive en un job propio del repo con sus secretos.
+        type: boolean
+        default: true
       node-version:
         type: string
         default: "22"
@@ -36,4 +44,5 @@ jobs:
         run: pnpm test --if-present
       - if: ${{ inputs.knip }}
         run: pnpm exec knip
-      - run: pnpm build --if-present
+      - if: ${{ inputs.build }}
+        run: pnpm build --if-present
