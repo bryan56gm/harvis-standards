@@ -187,5 +187,5 @@ pnpm test                       # scripts/test.mjs: las composiciones cargan y l
 node scripts/render-readme.mjs  # regenera la tabla de arriba
 ```
 
-Versionado: semver. Cada cambio de severidad o regla nueva es al menos `minor`; quitar
+Versionado: semver. `v2` es una etiqueta flotante que sigue al último 2.x (para `quality.yml@v2`); el paquete se fija a `#vX.Y.Z`. Cada cambio de severidad o regla nueva es al menos `minor`; quitar
 o endurecer una regla en `base` es `major`. `CHANGELOG.md`.
