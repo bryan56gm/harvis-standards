@@ -26,7 +26,7 @@ export default [...vite({ tsconfigRootDir: import.meta.dirname })];
 - Prettier: `import config from '@bryan56gm/harvis-standards/prettier'` (o `prettier-tailwind` con el plugin de orden de clases).
 - TypeScript: `"extends": "@bryan56gm/harvis-standards/tsconfig.base.json"`.
 - Hooks de git: `templates/lefthook.yml` + `templates/lint-staged.json` + `templates/commitlint.config.js`.
-- CI: `templates/ci.yml` → `uses: bryan56gm/harvis-standards/.github/workflows/quality.yml@v2`.
+- CI: `templates/ci.yml` → `uses: bryan56gm/harvis-standards/.github/workflows/quality.yml@v2`. El repo necesita `"packageManager": "pnpm@10.x"` en `package.json`.
 - Adopción sin bloquear: añade `...legacy` debajo mientras el código previo no cumpla `base`, y abre la issue de trinquete. Subir la severidad es un commit que se ve en el diff (HAR-0021).
 
 Un plugin solo se registra una vez en toda la cadena: `next()` no registra ninguno

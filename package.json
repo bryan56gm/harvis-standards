@@ -46,5 +46,6 @@
     "typescript-eslint": {
       "optional": false
     }
-  }
+  },
+  "packageManager": "pnpm@11.25.0"
 }

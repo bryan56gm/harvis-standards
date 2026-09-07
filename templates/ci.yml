@@ -1,4 +1,5 @@
 # harvis-standards v2 · copiar a .github/workflows/ci.yml del repo.
+# Requiere `"packageManager": "pnpm@10.x"` en package.json (pnpm/action-setup lo lee de ahí).
 name: ci
 on:
   pull_request:
