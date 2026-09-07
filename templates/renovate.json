@@ -1,0 +1,17 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits", "group:allNonMajor"],
+  "schedule": ["before 7am on monday"],
+  "rangeStrategy": "bump",
+  "lockFileMaintenance": { "enabled": true, "schedule": ["before 7am on the first day of the month"] },
+  "packageRules": [
+    {
+      "description": "El estándar sube con su tag; un bump es un PR propio que se revisa con la CI verde.",
+      "matchPackageNames": ["@bryan56gm/harvis-standards"],
+      "groupName": "harvis-standards",
+      "automerge": false
+    },
+    { "matchUpdateTypes": ["major"], "automerge": false },
+    { "matchDepTypes": ["devDependencies"], "matchUpdateTypes": ["minor", "patch"], "groupName": "dev tooling" }
+  ]
+}

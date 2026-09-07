@@ -1,0 +1,12 @@
+# harvis-standards v2 · evita los «250 archivos modificados» fantasma por LF/CRLF
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.svg binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+pnpm-lock.yaml -diff

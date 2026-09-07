@@ -1,0 +1,13 @@
+# harvis-standards v2 · copiar a .github/workflows/ci.yml del repo.
+# Requiere `"packageManager": "pnpm@10.x"` en package.json (pnpm/action-setup lo lee de ahí).
+name: ci
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  quality:
+    uses: bryan56gm/harvis-standards/.github/workflows/quality.yml@v2
+    with:
+      run-tests: true
+      max-warnings: 0     # trinquete: bajar a 0 cuando el repo salga de `legacy`
+      knip: false
