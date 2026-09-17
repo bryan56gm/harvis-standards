@@ -47,5 +47,6 @@
       "optional": false
     }
   },
-  "packageManager": "pnpm@11.25.0"
+  "packageManager": "pnpm@11.25.0",
+  "license": "MIT"
 }
