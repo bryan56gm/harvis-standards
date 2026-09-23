@@ -29,9 +29,22 @@ on:
       node-version:
         type: string
         default: "22"
+      runs-on:
+        description: >-
+          Dónde corre. Por defecto los ejecutores de GitHub, que es lo correcto
+          para un repositorio público. Un repo PRIVADO con ejecutor propio pasa
+          '["self-hosted","linux"]' y deja de gastar minutos del plan: cuando
+          esos minutos se agotan los checks no fallan, NO ARRANCAN —el PR se
+          queda en rojo sin haber ejecutado nada— y eso enseña a ignorar el
+          rojo. En septiembre de 2026 costó una semana de PRs sin verificar.
+
+          El workflow reutilizable corre en el contexto del repo que lo llama,
+          así que el ejecutor propio solo ve código de ese repo.
+        type: string
+        default: '["ubuntu-latest"]'
 jobs:
   quality:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
