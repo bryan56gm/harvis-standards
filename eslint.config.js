@@ -289,32 +289,71 @@ export const rulesOnly = [
 ];
 
 // ---------------------------------------------------------------------------
-// Composiciones por framework. Las excepciones locales van DEBAJO en el repo.
-export const next = ({ tsconfigRootDir, barrels: barrelOpts, tailwind: twOpts, cycles } = {}) => [
-  ...rulesOnly,
-  ...(cycles === false ? importsRulesOnlySinCiclos : importsRulesOnly),
-  ...a11y,
-  ...barrels(barrelOpts),
-  ...tailwind(twOpts),
-  ...(tsconfigRootDir ? promises({ tsconfigRootDir }) : []),
-];
+// Una opcion que no existe es un ERROR, no un silencio.
+//
+// JavaScript ignora sin rechistar una propiedad que nadie lee, y eso convierte
+// una version vieja del estandar en una trampa: el repo pasa `cycles: false`,
+// la version instalada no sabe que es `cycles`, y el resultado es que la
+// opcion no hace NADA mientras todo el mundo la da por aplicada.
+//
+// Paso de verdad (2026-09-23). `personal-os` desactivo `import/no-cycle` --la
+// regla que se llevaba el 89,7 % del lint, 1272 s de 1418-- apuntando a una
+// version del estandar que nunca se publico. Quedo clavado en v2.1.0, la
+// opcion se ignoro, y el lint siguio tardando quince minutos con un PR
+// mergeado que decia que ya no.
+//
+// Con esto, esa combinacion falla al arrancar ESLint y dice exactamente que
+// pasa. Un fallo ruidoso el primer dia vale mas que semanas creyendo que algo
+// esta arreglado.
+const comprobarOpciones = (nombre, opts, permitidas) => {
+  const sobran = Object.keys(opts).filter((k) => !permitidas.includes(k));
+  if (sobran.length) {
+    throw new Error(
+      `harvis-standards: ${nombre}() no conoce ${sobran.map((k) => `\`${k}\``).join(', ')}. ` +
+        `Acepta: ${permitidas.join(', ')}. ` +
+        `Si la opcion deberia existir, la version instalada es vieja: mira la etiqueta en package.json.`,
+    );
+  }
+};
 
-export const vite = ({ tsconfigRootDir, tailwind: twOpts, cycles } = {}) => [
+// Composiciones por framework. Las excepciones locales van DEBAJO en el repo.
+export const next = (opts = {}) => {
+  comprobarOpciones('next', opts, ['tsconfigRootDir', 'barrels', 'tailwind', 'cycles']);
+  const { tsconfigRootDir, barrels: barrelOpts, tailwind: twOpts, cycles } = opts;
+  return [
+    ...rulesOnly,
+    ...(cycles === false ? importsRulesOnlySinCiclos : importsRulesOnly),
+    ...a11y,
+    ...barrels(barrelOpts),
+    ...tailwind(twOpts),
+    ...(tsconfigRootDir ? promises({ tsconfigRootDir }) : []),
+  ];
+};
+
+export const vite = (opts = {}) => {
+  comprobarOpciones('vite', opts, ['tsconfigRootDir', 'tailwind', 'cycles']);
+  const { tsconfigRootDir, tailwind: twOpts, cycles } = opts;
+  return [
   ...base,
   ...react,
   ...boundaries,
   ...(cycles === false ? importsSinCiclos : imports),
   ...a11yPlugin,
   ...tailwind(twOpts),
-  ...(tsconfigRootDir ? promises({ tsconfigRootDir, files: ['src/**/*.{ts,tsx}'] }) : []),
-];
+    ...(tsconfigRootDir ? promises({ tsconfigRootDir, files: ['src/**/*.{ts,tsx}'] }) : []),
+  ];
+};
 
-export const astro = ({ tsconfigRootDir, tailwind: twOpts } = {}) => [
+export const astro = (opts = {}) => {
+  comprobarOpciones('astro', opts, ['tsconfigRootDir', 'tailwind']);
+  const { tsconfigRootDir, tailwind: twOpts } = opts;
+  return [
   ...base,
   ...react,
   ...imports,
   ...tailwind(twOpts),
-  ...(tsconfigRootDir ? promises({ tsconfigRootDir, files: ['src/**/*.{ts,tsx}'] }) : []),
-];
+    ...(tsconfigRootDir ? promises({ tsconfigRootDir, files: ['src/**/*.{ts,tsx}'] }) : []),
+  ];
+};
 
 export default [...base, ...react, ...boundaries];

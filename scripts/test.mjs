@@ -72,4 +72,29 @@ for (const [nombre, hacer] of [['next', std.next], ['vite', std.vite]]) {
   );
 }
 
+// Una opción que no existe FALLA, no se ignora.
+//
+// El fallo que lo trajo (2026-09-23): `personal-os` pasó `cycles: false`
+// apuntando a una versión del estándar que no conocía la opción. JavaScript la
+// ignoró sin decir nada, el PR se mergeó creyendo el problema resuelto, y el
+// lint siguió tardando quince minutos durante días. Un `cycles: false` que no
+// hace nada es peor que un error: parece que está arreglado.
+for (const [nombre, hacer, mala] of [
+  ['next', std.next, 'ciclos'],
+  ['vite', std.vite, 'cicles'],
+  ['astro', std.astro, 'cycles'],
+]) {
+  let grito = null;
+  try {
+    hacer({ tsconfigRootDir: raiz, [mala]: false });
+  } catch (e) {
+    grito = e.message;
+  }
+  expect(grito !== null, `${nombre}({${mala}}) tiene que fallar, no ignorarse`);
+  expect(
+    grito?.includes(mala) && grito?.includes('version instalada'),
+    `${nombre}() dice QUÉ opción sobra y que puede ser una versión vieja`,
+  );
+}
+
 console.log(process.exitCode ? '\nFALLOS' : '\nharvis-standards: OK');
