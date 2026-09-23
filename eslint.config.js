@@ -8,6 +8,8 @@
 //   boundaries    arquitectura app → features → lib (REGISTRA eslint-plugin-boundaries)
 //   imports       import/no-cycle y orden (REGISTRA eslint-plugin-import)
 //   importsRulesOnly  las mismas reglas sin registrar el plugin (Next ya lo registra)
+//   *SinCiclos    las mismas, sin `import/no-cycle` — para repos que comprueban
+//                 el grafo con `pnpm ciclos` (madge). Ver la nota junto a IMPORT_RULES.
 //   barrels(opts) fronteras entre módulos: solo `@/features/<m>` o `/client`; components/ y lib/ sin dominio
 //   a11y          reglas de jsx-a11y sin registrar el plugin (Next) · a11yPlugin lo registra (Vite/Astro)
 //   promises(opts) type-aware: no-floating-promises, no-misused-promises (necesita tsconfigRootDir)
@@ -133,19 +135,45 @@ export const boundaries = [
   },
 ];
 
-const IMPORT_RULES = {
-  'import/no-cycle': ['error', { maxDepth: 10 }],
+// `import/no-cycle` no escala, y conviene saber por qué antes de tocarlo.
+//
+// Un ciclo es una propiedad del GRAFO de imports, pero ESLint analiza fichero a
+// fichero: la regla reconstruye el grafo desde cada uno. El coste crece con el
+// cuadrado del proyecto y no se nota hasta que se nota de golpe. Medido en
+// `personal-os` (1151 ficheros, 2026-09-23): **617 s de los 693 s que tardaba
+// el lint entero — el 89,5 %**. El resto de reglas juntas sumaban 70 s.
+//
+// La alternativa es construir el grafo UNA vez. `madge` hace exactamente eso y
+// tarda 6 s sobre el mismo proyecto: cien veces menos. Se comprobó que no es un
+// cambio a peor introduciendo un ciclo a propósito — las dos lo detectan— y que
+// lo único que `madge` no mira son paquetes de `node_modules`, que no pueden
+// formar un ciclo interno.
+//
+// Por eso `cycles: false` no deja un hueco: obliga a poner el guardia en otro
+// sitio (`pnpm ciclos`, y su paso en `quality.yml`). Y por eso el valor por
+// defecto sigue siendo `true`: en un repo pequeño la regla no duele, y quitarla
+// de todos a la vez dejaría cinco proyectos sin comprobación mientras cada uno
+// se pone al día. El umbral práctico está por los cientos de ficheros — si el
+// lint se va de un minuto, este es el primer sitio donde mirar.
+const IMPORT_RULES_BASE = {
   'import/no-self-import': 'error',
   'import/first': 'error',
   'import/newline-after-import': 'error',
   'import/no-duplicates': 'error',
 };
+const CYCLE_RULE = { 'import/no-cycle': ['error', { maxDepth: 10 }] };
+const IMPORT_RULES = { ...CYCLE_RULE, ...IMPORT_RULES_BASE };
 const IMPORT_SETTINGS = {
   "import/parsers": { "@typescript-eslint/parser": [".ts", ".tsx", ".mts"] },
   "import/resolver": { node: { extensions: [".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts"] } },
 };
+// Los cuatro exports siguen siendo ARRAYS y con las mismas reglas de siempre:
+// quien ya hacía `...imports` no se entera de nada. Las variantes `SinCiclos`
+// son aditivas, para el repo que ya comprueba el grafo por su cuenta.
 export const imports = [{ files: CODE_FILES, plugins: { import: importPlugin }, settings: IMPORT_SETTINGS, rules: IMPORT_RULES }];
 export const importsRulesOnly = [{ files: CODE_FILES, rules: IMPORT_RULES }];
+export const importsSinCiclos = [{ files: CODE_FILES, plugins: { import: importPlugin }, settings: IMPORT_SETTINGS, rules: IMPORT_RULES_BASE }];
+export const importsRulesOnlySinCiclos = [{ files: CODE_FILES, rules: IMPORT_RULES_BASE }];
 
 // Fronteras entre módulos (REF-std-architecture: dos barriles, agregador declarado).
 //   opts.allow: patrones que sí pueden importarse aunque sean internos
@@ -262,20 +290,20 @@ export const rulesOnly = [
 
 // ---------------------------------------------------------------------------
 // Composiciones por framework. Las excepciones locales van DEBAJO en el repo.
-export const next = ({ tsconfigRootDir, barrels: barrelOpts, tailwind: twOpts } = {}) => [
+export const next = ({ tsconfigRootDir, barrels: barrelOpts, tailwind: twOpts, cycles } = {}) => [
   ...rulesOnly,
-  ...importsRulesOnly,
+  ...(cycles === false ? importsRulesOnlySinCiclos : importsRulesOnly),
   ...a11y,
   ...barrels(barrelOpts),
   ...tailwind(twOpts),
   ...(tsconfigRootDir ? promises({ tsconfigRootDir }) : []),
 ];
 
-export const vite = ({ tsconfigRootDir, tailwind: twOpts } = {}) => [
+export const vite = ({ tsconfigRootDir, tailwind: twOpts, cycles } = {}) => [
   ...base,
   ...react,
   ...boundaries,
-  ...imports,
+  ...(cycles === false ? importsSinCiclos : imports),
   ...a11yPlugin,
   ...tailwind(twOpts),
   ...(tsconfigRootDir ? promises({ tsconfigRootDir, files: ['src/**/*.{ts,tsx}'] }) : []),
