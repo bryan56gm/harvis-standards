@@ -5,6 +5,7 @@
 //   pnpm test
 import { ESLint } from 'eslint';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as std from '../eslint.config.js';
 
@@ -94,6 +95,27 @@ for (const [nombre, hacer, mala] of [
   expect(
     grito?.includes(mala) && grito?.includes('version instalada'),
     `${nombre}() dice QUÉ opción sobra y que puede ser una versión vieja`,
+  );
+}
+
+// `--if-present` va a pnpm, nunca detras del script.
+//
+// `pnpm ciclos --if-present` parece lo mismo que `pnpm run --if-present
+// ciclos` y hace lo contrario: el flag llega AL SCRIPT. madge contesta
+// «unknown option '--if-present'» y tumba el job -- o sea que en vez de saltar
+// un script que no existe, revienta el que si existe. Pasó el 2026-09-23 y
+// costo una ronda entera de CI.
+//
+// Se comprueba sobre el workflow porque ahi es donde vive el error: un YAML no
+// tiene quien le avise, y este se copia a mano cada vez que se anade un paso.
+{
+  const wf = fs.readFileSync(new URL('../.github/workflows/quality.yml', import.meta.url), 'utf8');
+  const malos = wf
+    .split('\n')
+    .filter((l) => /run:/.test(l) && /--if-present/.test(l) && !/run --if-present/.test(l));
+  expect(
+    malos.length === 0,
+    `quality.yml usa \`pnpm run --if-present <script>\`${malos.length ? `; mal en: ${malos.join(' | ').trim()}` : ''}`,
   );
 }
 
