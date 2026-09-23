@@ -26,6 +26,34 @@ on:
           ese build vive en un job propio del repo con sus secretos.
         type: boolean
         default: true
+      presupuesto-segundos:
+        description: >-
+          Regla de oro: este job no pasa de 5 minutos. Si los pasa, FALLA.
+
+          No es una metrica que alguien mira de vez en cuando: es un check. Un
+          CI que se va a quince minutos no se arregla nunca —cada quien que lo
+          sufre decide que hoy no le toca a el— y acaba saltandose con
+          `--no-verify` o ignorandose del todo, que es como se llega a mergear
+          sin verificar. Tenerlo como fallo obliga a arreglarlo el dia que se
+          rompe, cuando todavia se sabe que cambio lo rompio.
+
+          Se sube con un PR y su motivo, igual que se baja un umbral de
+          cobertura. Ponerlo a 0 lo desactiva, y eso tambien deja rastro.
+        type: number
+        default: 300
+      concurrencia-lint:
+        description: >-
+          Hilos de ESLint. `auto` —uno por nucleo— parece lo obvio y en una
+          maquina compartida es como se mata el job: con reglas type-aware CADA
+          hilo construye su propio programa de TypeScript, ~3,8 GB. En el VPS
+          (4 nucleos, 15 GB) `auto` se lo come entero y el vigilante de memoria
+          mata el lint a media faena. Pasa como SIGTERM, sin mensaje que
+          explique nada, y parece que el CI «se cuelga».
+
+          2 es el equilibrio medido: casi toda la ganancia de la paralelizacion
+          sin acercarse al techo de memoria.
+        type: string
+        default: "2"
       node-version:
         type: string
         default: "22"
@@ -50,7 +78,12 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: "${{ inputs.node-version }}", cache: pnpm }
+      # El reloj arranca DESPUES de instalar: lo que se presupuesta es el
+      # trabajo de comprobar, no la descarga de dependencias, que depende de si
+      # la cache del ejecutor estaba caliente y no de si el codigo esta sano.
       - run: pnpm install --frozen-lockfile
+      - id: reloj
+        run: echo "inicio=$(date +%s)" >> "$GITHUB_OUTPUT"
       # `--concurrency=auto`: un hilo por núcleo en vez de uno solo.
       #
       # Con reglas que usan tipos, ESLint construye el programa de TypeScript
@@ -65,7 +98,7 @@ jobs:
       # local eso es un intercambio razonable —se gana velocidad y el CI tiene
       # la última palabra—; aquí, donde esta es la última palabra, un falso
       # verde vale más que los segundos que ahorraría.
-      - run: pnpm exec eslint . --concurrency=auto --max-warnings ${{ inputs.max-warnings }}
+      - run: pnpm exec eslint . --concurrency=${{ inputs.concurrencia-lint }} --max-warnings ${{ inputs.max-warnings }}
 
       # Ciclos de imports, para el repo que los sacó del lint.
       #
@@ -83,3 +116,37 @@ jobs:
         run: pnpm exec knip
       - if: ${{ inputs.build }}
         run: pnpm build --if-present
+
+      # ── La regla de oro ────────────────────────────────────────────────────
+      #
+      # Va al final y con `always()`: un job que falla por lento tambien tiene
+      # que decirlo, y si se saltara cuando algo mas ha fallado, el dia que el
+      # lint tarde veinte minutos Y falle, solo veriamos lo segundo.
+      #
+      # Se mide dentro del job y no desde fuera a proposito: la duracion que
+      # GitHub muestra incluye esperar a que haya ejecutor libre, y eso no es
+      # culpa del codigo. Lo que se presupuesta es lo que este repo puede
+      # arreglar.
+      - name: Presupuesto de tiempo
+        if: ${{ always() && inputs.presupuesto-segundos > 0 }}
+        run: |
+          tardo=$(( $(date +%s) - ${{ steps.reloj.outputs.inicio }} ))
+          techo=${{ inputs.presupuesto-segundos }}
+          printf 'comprobaciones: %ss (techo %ss)\n' "$tardo" "$techo"
+          if [ "$tardo" -gt "$techo" ]; then
+            {
+              echo "### Este job tarda demasiado"
+              echo ""
+              echo "**${tardo}s**, y el techo son **${techo}s**."
+              echo ""
+              echo "No es un aviso: es un fallo, y a proposito. Un CI lento no se"
+              echo "arregla nunca —cada quien que lo sufre decide que hoy no le toca"
+              echo "a el— y acaba saltandose. Tenerlo en rojo obliga a mirarlo el dia"
+              echo "que se rompe, cuando todavia se sabe que cambio lo rompio."
+              echo ""
+              echo "Se arregla haciendolo mas rapido. Si de verdad no se puede, se"
+              echo "sube \`presupuesto-segundos\` en el PR, con el motivo escrito."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Las comprobaciones tardan ${tardo}s y el techo son ${techo}s."
+            exit 1
+          fi

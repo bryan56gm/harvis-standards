@@ -189,3 +189,29 @@ node scripts/render-readme.mjs  # regenera la tabla de arriba
 
 Versionado: semver. `v2` es una etiqueta flotante que sigue al último 2.x (para `quality.yml@v2`); el paquete se fija a `#vX.Y.Z`. Cada cambio de severidad o regla nueva es al menos `minor`; quitar
 o endurecer una regla en `base` es `major`. `CHANGELOG.md`.
+
+## El presupuesto de tiempo
+
+`quality.yml` **falla** si las comprobaciones pasan de cinco minutos
+(`presupuesto-segundos`, 300 por defecto).
+
+No es una métrica: es un check. Un CI lento no se arregla nunca —cada quien que
+lo sufre decide que hoy no le toca a él— y acaba saltándose con `--no-verify` o
+ignorándose del todo, que es como se llega a mergear sin verificar. En rojo,
+hay que mirarlo el día que se rompe, cuando todavía se sabe qué cambio lo rompió.
+
+El reloj arranca **después** de instalar dependencias: lo que se presupuesta es
+comprobar, no descargar. Y se mide dentro del job, no desde fuera, porque la
+duración que muestra GitHub incluye esperar a que haya ejecutor libre, y eso no
+lo arregla el repo.
+
+Si de verdad no se puede bajar, se sube el techo en un PR con el motivo escrito.
+Ponerlo a `0` lo desactiva, y eso también deja rastro.
+
+### `concurrencia-lint`
+
+Por defecto **2**, no `auto`. Con reglas que usan tipos, cada hilo de ESLint
+construye su propio programa de TypeScript —unos 3,8 GB—, así que `auto` en una
+máquina de 4 núcleos y 15 GB se la come entera y el vigilante de memoria mata el
+lint a media faena: llega como un `SIGTERM` sin mensaje, y parece que el CI se
+cuelga. Con 2 se conserva casi toda la ganancia sin acercarse al techo.
