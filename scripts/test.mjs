@@ -51,4 +51,25 @@ expect(has('src/features/a/long.ts', 'max-lines'), 'max-lines: 301 líneas es er
 expect(has('src/components/Shared.tsx', 'boundaries/element-types'), 'boundaries: components/ no importa de features/');
 expect(!has('src/features/a/clean.ts', '@typescript-eslint/no-explicit-any') && (byFile['src/features/a/clean.ts'] || []).length === 0, 'clean.ts sin hallazgos');
 
+// `cycles: false` apaga la regla, y SOLO esa.
+//
+// La opción existe porque `import/no-cycle` no escala: en un repo de 1151
+// ficheros se llevaba el 89,5 % del tiempo del lint, y ahí el grafo se
+// comprueba con `pnpm ciclos` (madge, cien veces más rápido). Lo que se vigila
+// aquí son las dos formas de estropearlo: que la opción no haga nada —y el
+// repo grande siga pagando— o que se lleve por delante más reglas de la
+// cuenta, dejando a los demás sin el orden de imports que sí necesitan.
+const reglasDe = (cfg) => new Set(cfg.flatMap((c) => Object.keys(c.rules || {})));
+const raiz = process.cwd();
+for (const [nombre, hacer] of [['next', std.next], ['vite', std.vite]]) {
+  const conCiclos = reglasDe(hacer({ tsconfigRootDir: raiz }));
+  const sinCiclos = reglasDe(hacer({ tsconfigRootDir: raiz, cycles: false }));
+  expect(conCiclos.has('import/no-cycle'), `${nombre}() trae import/no-cycle por defecto`);
+  expect(!sinCiclos.has('import/no-cycle'), `${nombre}({cycles:false}) lo quita`);
+  expect(
+    sinCiclos.has('import/no-duplicates') && sinCiclos.has('import/no-self-import'),
+    `${nombre}({cycles:false}) conserva el resto de reglas de imports`,
+  );
+}
+
 console.log(process.exitCode ? '\nFALLOS' : '\nharvis-standards: OK');

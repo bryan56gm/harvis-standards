@@ -51,7 +51,31 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "${{ inputs.node-version }}", cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec eslint . --max-warnings ${{ inputs.max-warnings }}
+      # `--concurrency=auto`: un hilo por núcleo en vez de uno solo.
+      #
+      # Con reglas que usan tipos, ESLint construye el programa de TypeScript
+      # entero, y eso tarda: en `personal-os` —1151 ficheros— el lint completo
+      # se iba a **quince minutos** en un solo hilo. Era el paso más lento de
+      # todo el CI con diferencia, y el que hacía que cada ronda costara una
+      # espera larga.
+      #
+      # Lo que NO se pone aquí es `--cache`, y es deliberado: la caché de ESLint
+      # se invalida por fichero, pero una regla type-aware puede fallar en un
+      # fichero que no ha cambiado porque cambió un tipo del que depende. En
+      # local eso es un intercambio razonable —se gana velocidad y el CI tiene
+      # la última palabra—; aquí, donde esta es la última palabra, un falso
+      # verde vale más que los segundos que ahorraría.
+      - run: pnpm exec eslint . --concurrency=auto --max-warnings ${{ inputs.max-warnings }}
+
+      # Ciclos de imports, para el repo que los sacó del lint.
+      #
+      # `--if-present` y no un paso obligatorio: quien siga con `import/no-cycle`
+      # dentro de ESLint no tiene este script y no debe fallar por no tenerlo.
+      # Quien lo tiene, lo corre — y ahí está el guardia que la regla dejó de
+      # dar. Lo que NO puede pasar es que un repo apague la regla y no ponga
+      # nada en su sitio: por eso el script se llama igual en todos y este paso
+      # existe aquí, en el estándar, y no en cada workflow.
+      - run: pnpm ciclos --if-present
       - run: pnpm exec tsc --noEmit
       - if: ${{ inputs.run-tests }}
         run: pnpm test --if-present
