@@ -1,17 +1,33 @@
 # CI del propio paquete: las composiciones cargan, las reglas muerden y el README está al día.
+#
+# Mismo contrato que `templates/ci.yml`: un borrador no gasta, un PR tiene un
+# solo run vivo. Sin `push: main`: lo que llega a main ya pasó por su PR, y
+# repetirlo era el 45 % de los runs de este repo en septiembre de 2026.
+#
+# `paths-ignore` NO incluye `**/*.md` aquí, y es deliberado: el README se
+# genera y este CI comprueba que está al día (`render-readme --check`).
 name: ci
 on:
   pull_request:
-  push:
-    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - 'docs/**'
+      - 'plans/**'
+      - 'LICENSE'
+  workflow_dispatch:
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   package:
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
-        with: { node-version: "22", cache: pnpm }
+        with: { node-version: '22', cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: node scripts/render-readme.mjs --check

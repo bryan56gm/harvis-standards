@@ -61,10 +61,10 @@ on:
           Una maquina con memoria de sobra puede subirlo. La que decide es la
           RAM, no los nucleos.
         type: string
-        default: "1"
+        default: '1'
       node-version:
         type: string
-        default: "22"
+        default: '22'
       runs-on:
         description: >-
           Dónde corre. Por defecto los ejecutores de GitHub, que es lo correcto
@@ -80,12 +80,31 @@ on:
         default: '["ubuntu-latest"]'
 jobs:
   quality:
+    # ── Un borrador no gasta ni un minuto ──────────────────────────────────
+    #
+    # En septiembre de 2026 la cuota gratuita (2.000 min/mes en privados) se
+    # agoto a mitad de mes, y buena parte se fue en PRs que nadie iba a
+    # mergear todavia: el CI corria en cada push de un PR a medio hacer.
+    #
+    # Aqui y no en el `ci.yml` de cada repo: el reusable corre en el contexto
+    # del evento que lo llama, asi que ve `github.event.pull_request.draft`, y
+    # todo repo que use `@v2` lo hereda sin tocar nada. Al pasar el PR a
+    # «listo» llega `ready_for_review` (la plantilla lo escucha) y corre UNA vez.
+    #
+    # Fuera de un PR (workflow_dispatch, un nocturno) no hay borrador que mirar
+    # y se ejecuta siempre.
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: ${{ fromJSON(inputs.runs-on) }}
+    # Techo de la maquina, no del codigo: el «Presupuesto de tiempo» de abajo
+    # mide el trabajo de comprobar y falla a los 5 min. Esto corta un job
+    # COLGADO —un test que no termina, un install que espera red— antes de que
+    # se coma media hora de cuota sin decir nada.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
-        with: { node-version: "${{ inputs.node-version }}", cache: pnpm }
+        with: { node-version: '${{ inputs.node-version }}', cache: pnpm }
       # El reloj arranca DESPUES de instalar: lo que se presupuesta es el
       # trabajo de comprobar, no la descarga de dependencias, que depende de si
       # la cache del ejecutor estaba caliente y no de si el codigo esta sano.
