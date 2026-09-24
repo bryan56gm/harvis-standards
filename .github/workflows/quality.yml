@@ -82,40 +82,47 @@ jobs:
       # trabajo de comprobar, no la descarga de dependencias, que depende de si
       # la cache del ejecutor estaba caliente y no de si el codigo esta sano.
       - run: pnpm install --frozen-lockfile
+      # El reloj arranca DESPUES de instalar: lo que se presupuesta es el
+      # trabajo de comprobar, no la descarga de dependencias, que depende de si
+      # la cache del ejecutor estaba caliente y no de si el codigo esta sano.
       - id: reloj
         run: echo "inicio=$(date +%s)" >> "$GITHUB_OUTPUT"
-      # `--concurrency=auto`: un hilo por núcleo en vez de uno solo.
-      #
-      # Con reglas que usan tipos, ESLint construye el programa de TypeScript
-      # entero, y eso tarda: en `personal-os` —1151 ficheros— el lint completo
-      # se iba a **quince minutos** en un solo hilo. Era el paso más lento de
-      # todo el CI con diferencia, y el que hacía que cada ronda costara una
-      # espera larga.
-      #
-      # Lo que NO se pone aquí es `--cache`, y es deliberado: la caché de ESLint
-      # se invalida por fichero, pero una regla type-aware puede fallar en un
-      # fichero que no ha cambiado porque cambió un tipo del que depende. En
-      # local eso es un intercambio razonable —se gana velocidad y el CI tiene
-      # la última palabra—; aquí, donde esta es la última palabra, un falso
-      # verde vale más que los segundos que ahorraría.
-      - run: pnpm exec eslint . --concurrency=${{ inputs.concurrencia-lint }} --max-warnings ${{ inputs.max-warnings }}
 
-      # Ciclos de imports, para el repo que los sacó del lint.
+      # ── Las tres comprobaciones, a la vez ──────────────────────────────────
       #
-      # OJO con el orden: `pnpm run --if-present ciclos`, NO `pnpm ciclos
-      # --if-present`. Lo segundo le pasa el flag AL SCRIPT, no a pnpm, y madge
-      # contesta «unknown option '--if-present'» y tumba el job. Un flag
-      # colocado detras parece lo mismo y hace lo contrario: en vez de saltar
-      # un script que no existe, revienta el que si existe.
+      # Lint, ciclos y tipos no se necesitan entre si: cada una lee el codigo y
+      # opina. En fila costaban la SUMA --184 s + 19 s + 72 s en `personal-os`--
+      # cuando el reloj de quien espera solo ve la mas larga.
       #
-      # `--if-present` y no un paso obligatorio: quien siga con `import/no-cycle`
-      # dentro de ESLint no tiene este script y no debe fallar por no tenerlo.
-      # Quien lo tiene, lo corre — y ahí está el guardia que la regla dejó de
-      # dar. Lo que NO puede pasar es que un repo apague la regla y no ponga
-      # nada en su sitio: por eso el script se llama igual en todos y este paso
-      # existe aquí, en el estándar, y no en cada workflow.
-      - run: pnpm run --if-present ciclos
-      - run: pnpm exec tsc --noEmit
+      # Y encaja en la maquina: el lint usa 2 hilos, `tsc` va practicamente a
+      # uno y `madge` es corto. Tres cosas en 4 nucleos no se estorban; en fila,
+      # ademas, quedaban nucleos parados mientras el lint corria.
+      #
+      # Cada una a su fichero y se vuelca al final: mezclar tres salidas segun
+      # llegan produce un log ilegible, y el log es lo primero que se mira
+      # cuando algo falla.
+      - name: Comprobaciones
+        run: |
+          pnpm exec eslint . --concurrency=${{ inputs.concurrencia-lint }} --max-warnings ${{ inputs.max-warnings }} >lint.log 2>&1 &
+          pid_lint=$!
+          pnpm run --if-present ciclos >ciclos.log 2>&1 &
+          pid_ciclos=$!
+          pnpm exec tsc --noEmit >tipos.log 2>&1 &
+          pid_tipos=$!
+
+          rc=0
+          wait $pid_lint   || rc=1
+          wait $pid_ciclos || rc=1
+          wait $pid_tipos  || rc=1
+
+          for f in lint ciclos tipos; do
+            echo "::group::$f"
+            cat "$f.log"
+            echo "::endgroup::"
+          done
+          rm -f lint.log ciclos.log tipos.log
+          exit $rc
+
       - if: ${{ inputs.run-tests }}
         run: pnpm run --if-present test
       - if: ${{ inputs.knip }}

@@ -208,6 +208,18 @@ lo arregla el repo.
 Si de verdad no se puede bajar, se sube el techo en un PR con el motivo escrito.
 Ponerlo a `0` lo desactiva, y eso también deja rastro.
 
+### Las tres a la vez
+
+Lint, ciclos y tipos corren **en paralelo** dentro del job. No se necesitan
+entre sí —cada una lee el código y opina— y en fila costaban la suma cuando el
+reloj de quien espera solo ve la más larga. En `personal-os`: 184 + 19 + 72 s
+en fila, contra ~190 s a la vez.
+
+Cabe en la máquina: el lint usa 2 hilos, `tsc` va prácticamente a uno y `madge`
+es corto. Cada salida va a su fichero y se vuelca agrupada al final — mezclar
+tres logs según llegan da algo que no se puede leer, y el log es lo primero que
+se mira cuando algo falla.
+
 ### `concurrencia-lint`
 
 Por defecto **2**, no `auto`. Con reglas que usan tipos, cada hilo de ESLint
