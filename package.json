@@ -1,6 +1,6 @@
 {
   "name": "@bryan56gm/harvis-standards",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "Estándar de ingeniería de Bryan, carril máquina: ESLint flat config por framework, regla custom de Tailwind, Prettier, tsconfig base, plantillas (lefthook, commitlint, knip, renovate, CI) y workflow reutilizable. README generado desde la configuración.",
   "type": "module",
   "exports": {

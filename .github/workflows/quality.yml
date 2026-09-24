@@ -43,17 +43,25 @@ on:
         default: 300
       concurrencia-lint:
         description: >-
-          Hilos de ESLint. `auto` —uno por nucleo— parece lo obvio y en una
-          maquina compartida es como se mata el job: con reglas type-aware CADA
-          hilo construye su propio programa de TypeScript, ~3,8 GB. En el VPS
-          (4 nucleos, 15 GB) `auto` se lo come entero y el vigilante de memoria
-          mata el lint a media faena. Pasa como SIGTERM, sin mensaje que
-          explique nada, y parece que el CI «se cuelga».
+          Hilos de ESLint.
 
-          2 es el equilibrio medido: casi toda la ganancia de la paralelizacion
-          sin acercarse al techo de memoria.
+          El techo de este job NO es la CPU: es la MEMORIA. Con reglas
+          type-aware cada hilo construye su propio programa de TypeScript, unos
+          3,8 GB. Y no corre solo: al lado van `tsc` (~2 GB) y, en otro job del
+          mismo workflow, los tests. En el VPS --4 nucleos, 15 GB-- eso se junta
+          enseguida y el vigilante de memoria mata el lint a media faena. Llega
+          como SIGTERM sin un mensaje que explique nada, y parece que el CI «se
+          cuelga» o que tarda de mas.
+
+          Por eso 1 y no `auto` ni 2: la ganancia viene de correr las tres
+          comprobaciones A LA VEZ, y eso solo cabe si cada una es modesta.
+          Paralelizar y ademas darle hilos a cada parte es pedir la maquina dos
+          veces.
+
+          Una maquina con memoria de sobra puede subirlo. La que decide es la
+          RAM, no los nucleos.
         type: string
-        default: "2"
+        default: "1"
       node-version:
         type: string
         default: "22"
@@ -94,9 +102,12 @@ jobs:
       # opina. En fila costaban la SUMA --184 s + 19 s + 72 s en `personal-os`--
       # cuando el reloj de quien espera solo ve la mas larga.
       #
-      # Y encaja en la maquina: el lint usa 2 hilos, `tsc` va practicamente a
-      # uno y `madge` es corto. Tres cosas en 4 nucleos no se estorban; en fila,
-      # ademas, quedaban nucleos parados mientras el lint corria.
+      # Y encaja en la maquina PORQUE cada una es modesta: el lint a un hilo
+      # (~3,8 GB), `tsc` a uno (~2 GB) y `madge` corto. Lo que manda aqui es la
+      # memoria, no los nucleos: el primer intento las puso a la vez SIN bajar
+      # los hilos del lint y el vigilante lo mato con SIGTERM a los 155 s.
+      # Paralelizar y ademas darle hilos a cada parte es pedir la maquina dos
+      # veces.
       #
       # Cada una a su fichero y se vuelca al final: mezclar tres salidas segun
       # llegan produce un log ilegible, y el log es lo primero que se mira
