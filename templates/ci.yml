@@ -1,13 +1,33 @@
 # harvis-standards v2 · copiar a .github/workflows/ci.yml del repo.
 # Requiere `"packageManager": "pnpm@10.x"` en package.json (pnpm/action-setup lo lee de ahí).
+#
+# Cuándo gasta minutos, y cuándo no:
+#   - PR en BORRADOR ............... 0. quality.yml se salta los borradores.
+#   - PR pasa a «listo» ............ 1 run (evento `ready_for_review`).
+#   - push a un PR listo ........... 1 run, y CANCELA el que estuviera en curso.
+#   - PR que solo toca docs ........ 0 (paths-ignore).
+#   - push a main .................. 0. Lo que llega a main ya pasó por su PR.
 name: ci
 on:
   pull_request:
+    # `ready_for_review` es el que importa: sin él, un PR que nace borrador y
+    # pasa a listo sin un push nuevo se quedaría sin verificar.
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'plans/**'
+      - '.claude/**'
+      - 'LICENSE'
   workflow_dispatch:
+# Un PR, un run vivo. Cinco pushes seguidos cuestan lo que el último.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   quality:
     uses: bryan56gm/harvis-standards/.github/workflows/quality.yml@v2
     with:
       run-tests: true
-      max-warnings: 0     # trinquete: bajar a 0 cuando el repo salga de `legacy`
+      max-warnings: 0 # trinquete: bajar a 0 cuando el repo salga de `legacy`
       knip: false
