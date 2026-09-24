@@ -222,8 +222,15 @@ se mira cuando algo falla.
 
 ### `concurrencia-lint`
 
-Por defecto **2**, no `auto`. Con reglas que usan tipos, cada hilo de ESLint
-construye su propio programa de TypeScript —unos 3,8 GB—, así que `auto` en una
-máquina de 4 núcleos y 15 GB se la come entera y el vigilante de memoria mata el
-lint a media faena: llega como un `SIGTERM` sin mensaje, y parece que el CI se
-cuelga. Con 2 se conserva casi toda la ganancia sin acercarse al techo.
+Por defecto **1**, y no es una renuncia: medido en `personal-os`, **82 s a un
+hilo contra 121 s a dos**. Con reglas que usan tipos, cada hilo construye su
+propio programa de TypeScript —unos 3,8 GB—, así que el segundo hilo duplica el
+trabajo y la memoria para ir más lento.
+
+El techo de este job no son los núcleos: es la **memoria**. Al lado corre `tsc`
+(~2 GB) y, en otro job del mismo workflow, los tests. En el VPS —4 núcleos,
+15 GB, de los que el escritorio puede reservar 12— eso se junta enseguida y el
+vigilante mata lo que pille. Llega como `SIGTERM` sin mensaje: parece que el CI
+se cuelga o que tarda de más, y no es ninguna de las dos.
+
+Una máquina con memoria de sobra puede subirlo. La que decide es la RAM.
