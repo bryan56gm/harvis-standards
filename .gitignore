@@ -1,1 +1,4 @@
 node_modules/
+
+# Cache de ESLint: local y en el CI, nunca se versiona.
+.eslintcache
